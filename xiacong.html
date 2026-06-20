@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>夏聪 • 摄影师 · 作品集</title>
+
+  <!-- Tailwind v3 CDN + config: 自定义主色 & 开启 class 模式 dark -->
+  <script>
+    tailwind = {
+      config: {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: { primary: '#f43f5e' },
+            transitionTimingFunction: { 'in-expo': 'cubic-bezier(0.7,0,0.3,1)' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+  <!-- Basic styles + hero parallax, modal, particles -->
+  <style>
+    :root { --accent: #f43f5e; --bg-dark: #020617; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    /* Hero layered bg (uses CSS + canvas for particles)
+       已替换：在此处添加网络图片作为背景（示例使用 Unsplash），并叠加渐变以保持文字可读性 */
+    .hero-layer {
+      /* 背景图（网络图片）在最底层，渐变覆盖在其上以增加对比 */
+      background-image:
+        linear-gradient(180deg, rgba(6,10,14,0.55) 0%, rgba(6,10,14,0.45) 60%, rgba(6,10,14,0.6) 100%),
+        url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed; /* desktop parallax */
+      position: relative;
+      overflow: hidden;
+    }
+    /* big name gradient stroke */
+    .name-gradient {
+      background: linear-gradient(90deg, var(--accent), #7c2ae7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      background-size: 200% 200%;
+      animation: nameShift 6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes nameShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* floating arrow */
+    @keyframes floatDown { 0%{transform:translateY(0)}50%{transform:translateY(10px)}100%{transform:translateY(0)} }
+    .float { animation: floatDown 2s infinite; }
+
+    /* modal backdrop */
+    .modal-backdrop { background: rgba(2,6,23,0.78); backdrop-filter: blur(4px); }
+
+    /* responsive image height */
+    .work-img { min-height: 160px; }
+
+    /* stronger hover effect for images */
+    .work-card { transition: transform .45s cubic-bezier(.2,.9,.2,1), box-shadow .45s; }
+    .work-card:hover { transform: scale(1.04) rotate(-0.5deg); box-shadow: 0 30px 60px rgba(2,6,23,0.6); }
+
+    /* particle canvas fills hero */
+    #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+    /* dark mode tweaks (tailwind handles most) */
+    .dark body { background: #041224; }
+
+    /* mobile adjustments for hero visuals */
+    @media (max-width:640px){
+      .name-gradient { font-size: 2.2rem !important; }
+      .hero-layer { background-attachment: scroll; } /* 禁用 fixed 以提升移动端性能 */
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100 antialiased">
+
+  <!-- HEADER: logo, nav, dark mode toggle -->
+  <header class="fixed inset-x-0 top-4 z-50">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
+      <a href="#hero" class="flex items-center gap-3">
+        <span class="inline-block w-3 h-3 rounded-full" style="background:linear-gradient(45deg,var(--accent),#7c2ae7)"></span>
+        <span class="font-semibold tracking-wide">夏聪</span>
+      </a>
+
+      <nav class="hidden md:flex gap-6 text-sm">
+        <a href="#about" class="hover:text-primary transition">关于</a>
+        <a href="#works" class="hover:text-primary transition">作品</a>
+        <a href="#services" class="hover:text-primary transition">服务</a>
+        <a href="#contact" class="hover:text-primary transition">联系</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <!-- Dark/Light toggle -->
+        <button id="themeToggle" aria-label="切换亮暗模式" class="p-2 rounded-md bg-white/6 text-white flex items-center gap-2">
+          <svg id="sunIcon" class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="none"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <svg id="moonIcon" class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <!-- Mobile menu -->
+        <button id="mobileToggle" class="p-2 rounded-md bg-white/6 text-white md:hidden" aria-label="打开菜单">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile nav overlay -->
+  <div id="mobileNav" class="fixed inset-0 z-40 hidden">
+    <div class="modal-backdrop absolute inset-0" onclick="toggleMobileNav()"></div>
+    <div class="relative z-50 bg-gray-900/95 h-full p-6">
+      <button onclick="toggleMobileNav()" class="mb-8 p-2 rounded-md bg-white/6 text-white">关闭 ✕</button>
+      <nav class="flex flex-col gap-6 text-xl">
+        <a href="#about" onclick="toggleMobileNav()">关于</a>
+        <a href="#works" onclick="toggleMobileNav()">作品</a>
+        <a href="#services" onclick="toggleMobileNav()">服务</a>
+        <a href="#contact" onclick="toggleMobileNav()">联系</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- HERO: 全屏 + 粒子 + 大名字 + 打字特效 -->
+  <section id="hero" class="hero-layer min-h-screen flex items-center">
+    <!-- particle canvas -->
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="max-w-6xl mx-auto px-6 py-28 relative z-10 text-center">
+      <div class="max-w-2xl mx-auto">
+        <!-- 超大名字 -->
+        <h1 class="font-extrabold leading-tight drop-shadow-xl text-[clamp(3.25rem,8.5vw,7.5rem)]">
+          <span class="name-gradient">夏&nbsp;聪</span>
+        </h1>
+
+        <!-- 职业 + 打字效果 -->
+        <p class="mt-4 text-gray-200/90 text-lg md:text-xl">
+          <span class="inline-block mr-2">摄影师</span>
+          <span id="typed" class="text-primary font-medium"></span>
+        </p>
+
+        <p class="mt-6 text-gray-300/80 tracking-wide">
+          捕捉光与影的瞬间，用影像讲述城市与人物的故事。
+        </p>
+
+        <div class="mt-8 flex items-center justify-center gap-4">
+          <a href="#works" class="inline-flex items-center gap-3 bg-gradient-to-r from-primary to-purple-600 text-white py-3 px-5 rounded-md shadow-lg hover:scale-105 transform transition">查看作品</a>
+          <a href="#contact" class="inline-flex items-center gap-3 border border-white/12 text-white py-3 px-5 rounded-md hover:border-primary transition">联系我</a>
+        </div>
+
+        <div class="mt-10 flex justify-center">
+          <a href="#about" class="text-white/90 float" aria-label="向下滚动">
+            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M19 12l-7 7-7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="max-w-7xl mx-auto px-6 py-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+      <div class="flex justify-center md:justify-start">
+        <div class="w-72 h-72 rounded-2xl overflow-hidden shadow-2xl transform-gpu transition hover:scale-105 bg-gradient-to-br from-white/5 to-white/3 p-1">
+          <!-- photographer portrait placeholder (replace with your own) -->
+          <img src="E:\图片\Snapseed\1000436945-01.jpeg" alt="夏聪 头像" class="object-cover w-full h-full">
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-3xl font-bold text-white">关于我</h2>
+        <p class="mt-4 text-gray-300/85 leading-relaxed">
+          我是夏聪，驻北京摄影师，擅长城市人像与风景影像。我的作品注重光线的塑造、色彩的节奏与情绪的叙事，欢迎合作与创作邀请。
+        </p>
+
+        <ul class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-300/80">
+          <li>• 商业 & 艺术摄影</li>
+          <li>• 影像叙事与视觉策划</li>
+          <li>• 场景布光与后期调色</li>
+          <li>• 项目策划与艺术顾问</li>
+        </ul>
+
+        <div class="mt-6 flex gap-4">
+          <a href="#works" class="px-4 py-2 bg-primary text-white rounded-md shadow hover:opacity-95 transition">查看作品集</a>
+          <a href="#contact" class="px-4 py-2 border border-white/12 rounded-md hover:border-primary transition">预约拍摄</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKS: 均匀 3 列网格（6 张） -->
+  <section id="works" class="bg-white/3 py-20">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-center justify-between mb-8">
+        <h3 class="text-2xl font-bold text-white">精选作品</h3>
+        <p class="text-sm text-gray-200/80">点击预览大图 · Hover 放大与投影</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- 1 -->
+        <figure class="relative group overflow-hidden rounded-lg bg-gradient-to-br from-black/10 to-black/5 shadow-lg cursor-pointer work-card" data-full="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop" data-title="晨曦山谷" data-desc="清晨的光透过薄雾，山谷中的宁静。">
+          <img class="object-cover w-full h-56 work-img transition-transform duration-500 group-hover:scale-105" src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1200&auto=format&fit=crop" alt="晨曦山谷">
+          <figcaption class="absolute left-4 bottom-4 text-white">
+            <div class="backdrop-blur-sm bg-black/30 px-3 py-2 rounded-md">
+              <h4 class="font-semibold">晨曦山谷</h4>
+              <p class="text-xs text-gray-200/80">风景 · 清晨</p>
+            </div>
+          </figcaption>
+        </figure>
+
+        <!-- 2 -->
+        <figure class="relative group overflow-hidden rounded-lg shadow-lg cursor-pointer work-card" data-full="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=1600&auto=format&fit=crop" data-title="城市侧影" data-desc="城市里的一瞬，人物与建筑的对话。">
+          <img class="object-cover w-full h-56 work-img transition-transform duration-500 group-hover:scale-105" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=1200&auto=format&fit=crop" alt="城市侧影">
+          <figcaption class="absolute left-4 bottom-4 text-white">
+            <div class="backdrop-blur-sm bg-black/30 px-3 py-2 rounded-md">
+              <h4 class="font-semibold">城市侧影</h4>
+              <p class="text-xs text-gray-200/80">人像 · 城市</p>
+            </div>
+          </figcaption>
+        </figure>
+
+        <!-- 3 -->
+        <figure class="relative group overflow-hidden rounded-lg shadow-lg cursor-pointer work-card" data-full="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop" data-title="材质光影" data-desc="用光刻画材质的质感与层次。">
+          <img class="object-cover w-full h-56 work-img transition-transform duration-500 group-hover:scale-105" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop" alt="材质光影">
+          <figcaption class="absolute left-4 bottom-4 text-white">
+            <div class="backdrop-blur-sm bg-black/30 px-3 py-2 rounded-md">
+              <h4 class="font-semibold">材质光影</h4>
+              <p class="text-xs text-gray-200/80">细节 · 静物</p>
+            </div>
+          </figcaption>
+        </figure>
+
+        <!-- 4 -->
+        <figure class="relative group overflow-hidden rounded-lg shadow-lg cursor-pointer work-card" data-full="https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?q=80&w=1600&auto=format&fit=crop" data-title="黄昏人像" data-desc="低光与肤色的温柔对话。">
+          <img class="object-cover w-full h-56 work-img transition-transform duration-500 group-hover:scale-105" src="https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?q=80&w=1200&auto=format&fit=crop" alt="黄昏人像">
+          <figcaption class="absolute left-4 bottom-4 text-white">
+            <div class="backdrop-blur-sm bg-black/30 px-3 py-2 rounded-md">
+              <h4 class="font-semibold">黄昏人像</h4>
+              <p class="text-xs text-gray-200/80">人像 · 光影</p>
+            </div>
+          </figcaption>
+        </figure>
+
+        <!-- 5 -->
+        <figure class="relative group overflow-hidden rounded-lg shadow-lg cursor-pointer work-card" data-full="E:\图片\Snapseed\1000437006-01.jpeg" data-title="城市夜色" data-desc="城市的霓虹与湿润街道的反光。">
+          <img class="object-cover w-full h-56 work-img transition-transform duration-500 group-hover:scale-105" src="E:\图片\Snapseed\1000437006-01.jpeg" alt="城市夜色">
+          <figcaption class="absolute left-4 bottom-4 text-white">
+            <div class="backdrop-blur-sm bg-black/30 px-3 py-2 rounded-md">
+              <h4 class="font-semibold">城市夜色</h4>
+              <p class="text-xs text-gray-200/80">风景 · 夜景</p>
+            </div>
+          </figcaption>
+        </figure>
+
+        <!-- 6 -->
+        <figure class="relative group overflow-hidden rounded-lg shadow-lg cursor-pointer work-card" data-full="E:\图片\Snapseed\1000436907-02.jpeg" data-title="几何构图" data-desc="用构图与线条建立视觉节奏。">
+          <img class="object-cover w-full h-56 work-img transition-transform duration-500 group-hover:scale-105" src="E:\图片\Snapseed\1000436907-02.jpeg" alt="几何构图">
+          <figcaption class="absolute left-4 bottom-4 text-white">
+            <div class="backdrop-blur-sm bg-black/30 px-3 py-2 rounded-md">
+              <h4 class="font-semibold">几何构图</h4>
+              <p class="text-xs text-gray-200/80">风景 · 构图</p>
+            </div>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services" class="max-w-7xl mx-auto px-6 py-20">
+    <h3 class="text-2xl font-bold text-white mb-6">服务</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-6 rounded-xl bg-gradient-to-b from-white/4 to-white/2 border border-white/6 shadow-lg hover:translate-y-[-6px] transition-transform">
+        <div class="flex items-start gap-4">
+          <div class="p-3 rounded-md bg-gradient-to-br from-primary to-purple-600 text-white">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-white">商业 & 艺术摄影</h4>
+            <p class="text-sm text-gray-300/80 mt-1">品牌形象、人像、场景与产品拍摄。含后期调色与交付。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-xl bg-gradient-to-b from-white/4 to-white/2 border border-white/6 shadow-lg hover:translate-y-[-6px] transition-transform">
+        <div class="flex items-start gap-4">
+          <div class="p-3 rounded-md bg-gradient-to-br from-primary to-purple-600 text-white">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M12 2l3 6 6 .9-4.5 3.9L19 21l-7-4-7 4 2.5-8.2L3 8.9 9 8 12 2z" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-white">影像叙事 & 视觉顾问</h4>
+            <p class="text-sm text-gray-300/80 mt-1">项目视觉策划、系列摄影与展示策展咨询。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-xl bg-gradient-to-b from-white/4 to-white/2 border border-white/6 shadow-lg hover:translate-y-[-6px] transition-transform">
+        <div class="flex items-start gap-4">
+          <div class="p-3 rounded-md bg-gradient-to-br from-primary to-purple-600 text-white">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><path d="M4 20v-7a4 4 0 014-4h8a4 4 0 014 4v7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 11v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <h4 class="font-semibold text-white">定制项目</h4>
+            <p class="text-sm text-gray-300/80 mt-1">广告拍摄、艺术展览影像与长期品牌合作。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="bg-white/4 py-20">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-gray-900/70 p-6 rounded-lg shadow-xl">
+          <h4 class="text-xl font-semibold text-white">联系我</h4>
+          <p class="mt-2 text-gray-300/80 text-sm">有合作、展览或商业拍摄需求，请填写以下信息或直接发邮件。</p>
+          <form id="contactForm" class="mt-6 space-y-4" onsubmit="event.preventDefault(); submitForm();">
+            <div>
+              <label class="text-sm text-gray-200">姓名</label>
+              <input required name="name" class="mt-1 w-full rounded-md bg-white/5 border border-white/6 px-3 py-2 text-white placeholder-gray-400" placeholder="你的名字">
+            </div>
+            <div>
+              <label class="text-sm text-gray-200">邮箱</label>
+              <input required name="email" type="email" class="mt-1 w-full rounded-md bg-white/5 border border-white/6 px-3 py-2 text-white placeholder-gray-400" placeholder="you@example.com">
+            </div>
+            <div>
+              <label class="text-sm text-gray-200">信息</label>
+              <textarea required name="message" rows="5" class="mt-1 w-full rounded-md bg-white/5 border border-white/6 px-3 py-2 text-white placeholder-gray-400" placeholder="项目简介 / 合作时间 / 预算 等"></textarea>
+            </div>
+            <div class="flex items-center gap-4">
+              <button class="bg-primary px-5 py-2 rounded-md text-white shadow">发送</button>
+              <p id="formMsg" class="text-sm text-green-400 hidden">已发送（示例不会真正发送）</p>
+            </div>
+          </form>
+        </div>
+
+        <div class="p-6 rounded-lg">
+          <h4 class="text-xl font-semibold text-white">社交与音乐</h4>
+          <p class="mt-2 text-gray-300/80">查看我的最新作品与影像故事，或在音乐平台听我整理的创作歌单。</p>
+
+          <div class="mt-6 flex items-center gap-3">
+            <!-- 网易云 -->
+            <a href="#" aria-label="网易云音乐" class="p-3 rounded-md bg-white/5 hover:bg-gradient-to-br hover:from-primary hover:to-purple-600 transition">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10" stroke="currentColor" stroke-width="1.6"/></svg>
+            </a>
+
+            <!-- 抖音 -->
+            <a href="#" aria-label="抖音" class="p-3 rounded-md bg-white/5 hover:bg-gradient-to-br hover:from-primary hover:to-purple-600 transition">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"><path d="M12 2v10a4 4 0 1 0 4 4V6" stroke="currentColor" stroke-width="1.6"/></svg>
+            </a>
+
+            <!-- Instagram placeholder -->
+            <a href="#" aria-label="Instagram" class="p-3 rounded-md bg-white/5 hover:bg-gradient-to-br hover:from-primary hover:to-purple-600 transition">
+              <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="1.6"/><path d="M8 11a4 4 0 108 0 4 4 0 00-8 0z" stroke="currentColor" stroke-width="1.6"/></svg>
+            </a>
+          </div>
+
+          <div class="mt-8 text-sm text-gray-300/80 space-y-1">
+            <div>邮箱: <a href="mailto:xiacong227@outlook.com" class="text-white/90 underline">xiacong227@outlook.com</a></div>
+            <div>地点: 北京</div>
+            <div>可接商业拍摄 / 艺术项目</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-8 text-center text-sm text-gray-400">
+    © 2026 夏聪 — 摄影 · 影像叙事
+  </footer>
+
+  <!-- IMAGE LIGHTBOX -->
+  <div id="lightbox" class="fixed inset-0 z-50 hidden items-center justify-center p-6">
+    <div class="modal-backdrop absolute inset-0" onclick="closeLightbox()"></div>
+    <div class="relative z-50 max-w-5xl w-full">
+      <button onclick="closeLightbox()" class="absolute right-2 top-2 z-50 p-2 rounded-md bg-white/10 text-white">✕</button>
+      <div class="bg-gradient-to-br from-black/80 to-black/90 rounded-lg overflow-hidden shadow-2xl">
+        <img id="lightboxImg" src="" alt="" class="w-full object-contain max-h-[80vh]">
+        <div class="p-4">
+          <h5 id="lightboxTitle" class="text-white font-semibold"></h5>
+          <p id="lightboxDesc" class="text-gray-300/80 mt-2 text-sm"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Minimal JS: interactions, particles, typing, theme, modal -->
+  <script>
+    /* ---------- Mobile nav ---------- */
+    function toggleMobileNav() {
+      document.getElementById('mobileNav').classList.toggle('hidden');
+    }
+    document.getElementById('mobileToggle').addEventListener('click', toggleMobileNav);
+
+    /* ---------- Light/Dark theme toggle ---------- */
+    const themeToggle = document.getElementById('themeToggle');
+    const root = document.documentElement;
+    // init from localStorage
+    if (localStorage.getItem('theme') === 'light') root.classList.remove('dark');
+    else root.classList.add('dark');
+    // update icons
+    function updateThemeIcons() {
+      const isDark = root.classList.contains('dark');
+      document.getElementById('moonIcon').style.display = isDark ? 'inline-block' : 'none';
+      document.getElementById('sunIcon').style.display = isDark ? 'none' : 'inline-block';
+    }
+    updateThemeIcons();
+    themeToggle.addEventListener('click', () => {
+      root.classList.toggle('dark');
+      const isDark = root.classList.contains('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      updateThemeIcons();
+    });
+
+    /* ---------- Typing effect for tagline ---------- */
+    const typedEl = document.getElementById('typed');
+    const phrases = ['光影叙事', '城市人像', '风景纪实'];
+    let pIndex = 0, cIndex = 0, deleting = false;
+    function tick() {
+      const current = phrases[pIndex];
+      typedEl.textContent = current.slice(0, cIndex) + (Date.now() % 600 < 300 ? '|' : '');
+      if (!deleting) {
+        if (cIndex < current.length) cIndex++;
+        else { deleting = true; setTimeout(tick, 700); return; }
+      } else {
+        if (cIndex > 0) cIndex--;
+        else { deleting = false; pIndex = (pIndex+1)%phrases.length; }
+      }
+      setTimeout(tick, deleting ? 60 : 100);
+    }
+    tick();
+
+    /* ---------- Lightbox for works ---------- */
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxTitle = document.getElementById('lightboxTitle');
+    const lightboxDesc = document.getElementById('lightboxDesc');
+    document.querySelectorAll('#works figure').forEach(fig => {
+      fig.addEventListener('click', () => {
+        const src = fig.dataset.full || fig.querySelector('img').src;
+        const title = fig.dataset.title || '';
+        const desc = fig.dataset.desc || '';
+        lightboxImg.src = src;
+        lightboxTitle.textContent = title;
+        lightboxDesc.textContent = desc;
+        lightbox.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    function closeLightbox() {
+      lightbox.classList.add('hidden');
+      document.body.style.overflow = '';
+      lightboxImg.src = '';
+      lightboxTitle.textContent = '';
+      lightboxDesc.textContent = '';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (!lightbox.classList.contains('hidden')) closeLightbox();
+        if (!document.getElementById('mobileNav').classList.contains('hidden')) toggleMobileNav();
+      }
+    });
+
+    /* ---------- Parallax subtle effect ---------- */
+    const hero = document.getElementById('hero');
+    window.addEventListener('scroll', () => {
+      const scrolled = window.scrollY;
+      hero.style.transform = `translateY(${scrolled * -0.03}px)`;
+    }, { passive: true });
+
+    /* ---------- Simple contact form demo ---------- */
+    function submitForm() {
+      const form = document.getElementById('contactForm');
+      const msg = document.getElementById('formMsg');
+      msg.classList.remove('hidden');
+      setTimeout(() => {
+        msg.classList.add('hidden');
+        form.reset();
+        alert('感谢你的信息！此示例为前端演示（未真正发送）。如需接入后台，我可帮你配置。');
+      }, 1200);
+    }
+
+    /* ---------- Particle system for hero background (moderate complexity) ---------- */
+    (function initParticles(){
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      let w = canvas.width = canvas.offsetWidth;
+      let h = canvas.height = canvas.offsetHeight;
+      const particles = [];
+      const N = Math.floor(Math.max(30, w*h/20000)); // density
+
+      function rand(min,max){ return Math.random()*(max-min)+min; }
+      for (let i=0;i<N;i++){
+        particles.push({
+          x: rand(0,w), y: rand(0,h),
+          r: rand(0.6,2.4),
+          vx: rand(-0.2,0.2), vy: rand(-0.05,0.2),
+          alpha: rand(0.08,0.22)
+        });
+      }
+
+      function resize(){ w = canvas.width = canvas.offsetWidth; h = canvas.height = canvas.offsetHeight; }
+      window.addEventListener('resize', resize);
+
+      function draw(){
+        ctx.clearRect(0,0,w,h);
+        for (let p of particles){
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < -10) p.x = w + 10;
+          if (p.x > w + 10) p.x = -10;
+          if (p.y > h + 10) p.y = -10;
+          // glow
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(244,63,94,${p.alpha})`; // primary tint
+          ctx.arc(p.x, p.y, p.r*1.6, 0, Math.PI*2);
+          ctx.fill();
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    /* Accessibility note: consider a focus trap for the lightbox in production. */
+  </script>
+</body>
+</html>
